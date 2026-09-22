@@ -1,0 +1,22 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  focus-timer:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: focus-timer
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: focus-timer/package-lock.json
+      - run: npm ci
+      - run: npm test

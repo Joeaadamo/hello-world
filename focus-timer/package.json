@@ -1,0 +1,12 @@
+{
+  "name": "focus-timer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pomodoro focus timer with a task list and daily streak",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^30.5.2"
+  }
+}

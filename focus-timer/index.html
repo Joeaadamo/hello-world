@@ -133,9 +133,9 @@
   <ul id="tasks"></ul>
 </main>
 
+<script src="timer-core.js"></script>
 <script>
-const DURATIONS = { focus: 25, short: 5, long: 15 }; // minutes
-const LONG_EVERY = 4;
+const { DURATIONS, formatTime: fmt, dayKey, computeStreak, completePhase, tomatoLabel } = TimerCore;
 const CIRC = 2 * Math.PI * 54;
 
 const $ = id => document.getElementById(id);
@@ -149,7 +149,6 @@ function load() {
 function save() {
   try { localStorage.setItem('focus-timer', JSON.stringify(state)); } catch {}
 }
-const dayKey = (d = new Date()) => d.toLocaleDateString('en-CA'); // YYYY-MM-DD
 
 const state = Object.assign({ tasks: [], selected: null, history: {}, cycle: 0 }, load());
 
@@ -190,34 +189,18 @@ function update() {
 function finish(skipped = false) {
   clearInterval(tick);
   tick = endsAt = null;
-  if (!skipped) chime();
-  if (mode === 'focus' && skipped) {
-    state.cycle++;
-    save();
-    setMode(state.cycle % LONG_EVERY === 0 ? 'long' : 'short');
-  } else if (mode === 'focus') {
-    const today = dayKey();
-    const h = state.history[today] || { sessions: 0, minutes: 0 };
-    h.sessions++; h.minutes += DURATIONS.focus;
-    state.history[today] = h;
-    const t = state.tasks.find(t => t.id === state.selected);
-    if (t) t.pomos = (t.pomos || 0) + 1;
-    state.cycle++;
-    save();
-    notify('Focus session done', 'Time for a break.');
-    setMode(state.cycle % LONG_EVERY === 0 ? 'long' : 'short');
-  } else {
-    if (!skipped) notify('Break over', 'Back to it!');
-    setMode('focus');
+  if (!skipped) {
+    chime();
+    if (mode === 'focus') notify('Focus session done', 'Time for a break.');
+    else notify('Break over', 'Back to it!');
   }
+  const next = completePhase(state, mode, { skipped });
+  save();
+  setMode(next);
   renderTasks(); renderStats();
 }
 
 // ---- rendering ----
-function fmt(ms) {
-  const s = Math.ceil(ms / 1000);
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-}
 function renderTime() {
   const total = DURATIONS[mode] * 60 * 1000;
   $('time').textContent = fmt(remaining);
@@ -235,12 +218,7 @@ function renderStats() {
   const h = state.history[dayKey()] || { sessions: 0, minutes: 0 };
   $('today').textContent = h.sessions;
   $('minutes').textContent = h.minutes;
-  // streak: consecutive days with ≥1 session, counting back from today (or yesterday if none yet today)
-  let streak = 0;
-  const d = new Date();
-  if (!state.history[dayKey(d)]) d.setDate(d.getDate() - 1);
-  while (state.history[dayKey(d)]?.sessions) { streak++; d.setDate(d.getDate() - 1); }
-  $('streak').textContent = streak;
+  $('streak').textContent = computeStreak(state.history);
 }
 
 function renderTasks() {
@@ -255,7 +233,7 @@ function renderTasks() {
     li.className = (t.id === state.selected ? 'selected ' : '') + (t.done ? 'done' : '');
     li.innerHTML = `<input type="checkbox" ${t.done ? 'checked' : ''} aria-label="Done">
       <span class="label"></span>
-      <span class="count">${t.pomos ? '🍅'.repeat(Math.min(t.pomos, 5)) + (t.pomos > 5 ? '+' : '') : ''}</span>
+      <span class="count">${tomatoLabel(t.pomos)}</span>
       <button class="del" aria-label="Delete">×</button>`;
     li.querySelector('.label').textContent = t.text;
     li.onclick = () => { state.selected = t.id; save(); renderTasks(); render(); };
