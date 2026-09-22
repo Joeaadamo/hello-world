@@ -1,4 +1,4 @@
-// Pure timer logic, kept free of DOM access so it can be unit tested (see tests.html).
+// Pure timer logic, kept free of DOM access so it can be unit tested (see timer-core.test.js).
 // Loaded as a classic script so index.html still works when opened via file://.
 (function (root) {
   const DURATIONS = { focus: 25, short: 5, long: 15 }; // minutes
